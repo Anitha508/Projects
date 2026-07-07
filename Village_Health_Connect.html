@@ -1,0 +1,537 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Village Health Connect</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+/* ===== Background & Particles ===== */
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+  color: #e0e6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+#backgroundCanvas {
+  position: absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:0;
+}
+
+/* ===== Containers ===== */
+.hidden { display: none !important; }
+.container {
+  position: relative;
+  z-index: 1;
+  background: rgba(12, 12, 12, 0.85);
+  padding: 25px 35px;
+  border-radius: 20px;
+  box-shadow: 0 0 25px rgba(255,165,0,0.2);
+  width: 95%;
+  max-width: 800px;
+  min-height: 400px;
+  backdrop-filter: blur(15px);
+  animation: fadeIn 0.6s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollable sections */
+.scrollable {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:none;} }
+
+/* ===== Typography ===== */
+h1,h2,h3 { color:#ff9f43; text-align:center; }
+button {
+  background: linear-gradient(90deg, #ff9f43, #ff6b00);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .3s;
+}
+button:hover { transform: scale(1.05); box-shadow:0 0 15px rgba(255,165,0,0.4); }
+.logout {background:linear-gradient(90deg,#ff4b2b,#ff416c);}
+.delete {background:linear-gradient(90deg,#ff3c3c,#ff6565);}
+
+/* ===== Input Fields ===== */
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0 14px 0;
+  border-radius: 8px;
+  border:1px solid rgba(255,165,0,0.3);
+  background: rgba(255,255,255,0.1);
+  color:#fff;
+  font-size: 14px;
+}
+textarea{resize:none;}
+select option { background: #111; color: #fff; }
+
+/* ===== Navbar & Tabs ===== */
+.navbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.tabs { display:flex; justify-content:space-around; margin:10px 0 20px; }
+.tabs button { flex:1; margin:0 5px; background:rgba(255,165,0,0.2); border:1px solid rgba(255,165,0,0.3); }
+.tabs button.active { background:linear-gradient(90deg,#ff9f43,#ff6b00); box-shadow:0 0 10px rgba(255,165,0,0.4); }
+
+/* ===== Toast ===== */
+.toast {
+  position:fixed; bottom:20px; right:20px;
+  background:linear-gradient(90deg,#ff9f43,#ff6b00); color:white; padding:10px 18px;
+  border-radius:10px; opacity:0; transform:translateY(20px);
+  transition:all .4s ease;
+}
+.toast.show{opacity:1; transform:translateY(0);}
+footer{text-align:center; font-size:13px; color:#f0b75e; margin-top:15px;}
+
+/* ===== User Home Image ===== */
+#userHome img {
+  width: 100%;
+  border-radius: 15px;
+  margin: 15px 0;
+}
+
+/* ===== Password Toggle ===== */
+input[type="password"] + i { color:#fff; }
+
+/* ===== Lightbox Styles ===== */
+.lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.lightbox-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.lightbox-overlay img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 10px;
+  box-shadow: 0 0 25px rgba(255,165,0,0.7);
+}
+</style>
+</head>
+<body>
+
+<canvas id="backgroundCanvas"></canvas>
+
+<!-- LOGIN -->
+<div class="container" id="loginPage">
+  <h1><i class="fa-solid fa-hand-holding-heart"></i> Village Health Connect</h1>
+  <h3>Login</h3>
+  <input type="text" id="username" placeholder="Enter Username">
+  <div style="position:relative;">
+    <input type="password" id="password" placeholder="Enter Password">
+    <i class="fa-solid fa-eye" style="position:absolute; right:10px; top:12px; cursor:pointer;" onclick="togglePassword('password', this)"></i>
+  </div>
+  <button onclick="login()">Login</button>
+  <p style="text-align:center; margin-top:10px;">
+    Don't have an account? <button style="background:none; border:none; color:#ff9f43; cursor:pointer;" onclick="showRegister()">Register</button>
+  </p>
+</div>
+
+<!-- REGISTRATION -->
+<div class="container hidden" id="registerPage">
+  <h1><i class="fa-solid fa-hand-holding-heart"></i> Village Health Connect</h1>
+  <h3>Register</h3>
+  <input type="text" id="regName" placeholder="Your Name" required>
+  <input type="text" id="regVillage" placeholder="Village Name" required>
+  <input type="text" id="regUsername" placeholder="Choose Username" required>
+
+  <div style="position:relative;">
+    <input type="password" id="regPassword" placeholder="Password" required>
+    <i class="fa-solid fa-eye" style="position:absolute; right:10px; top:12px; cursor:pointer;" onclick="togglePassword('regPassword', this)"></i>
+  </div>
+
+  <div style="position:relative;">
+    <input type="password" id="regConfirmPassword" placeholder="Confirm Password" required>
+    <i class="fa-solid fa-eye" style="position:absolute; right:10px; top:12px; cursor:pointer;" onclick="togglePassword('regConfirmPassword', this)"></i>
+  </div>
+
+  <button onclick="registerUser()">Register</button>
+  <p style="text-align:center; margin-top:10px;">
+    Already have an account? <button style="background:none; border:none; color:#ff9f43; cursor:pointer;" onclick="showLogin()">Login</button>
+  </p>
+</div>
+
+<!-- USER DASHBOARD -->
+<div class="container hidden" id="userPage">
+  <div class="navbar">
+    <h2><i class="fa-solid fa-user"></i> User Panel</h2>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+  <div class="tabs">
+    <button id="homeTab" class="active" onclick="showUserTab('home')">Home</button>
+    <button onclick="showUserTab('report')">Submit Issue</button>
+    <button onclick="showUserTab('status')">Status</button>
+  </div>
+  <div id="userHome">
+    <h3>Welcome to Village Health Connect</h3>
+    <p style="text-align:center;">Empowering rural communities to report and track health & hygiene issues for a cleaner, safer tomorrow.</p>
+    
+    <h4 style="text-align:center; color:#ffd166;">💡 Health Tip</h4>
+    <p id="tipText" style="text-align:center; font-size:16px; margin-bottom:10px;"></p>
+    <div style="text-align:center;">
+      <button onclick="newTip()" style="background:#ffd166;color:#111;">New Tip</button>
+    </div>
+  </div>
+  <div id="userReport" class="hidden">
+    <form id="reportForm">
+      <input type="text" id="name" placeholder="Your Name" readonly required>
+      <input type="text" id="village" placeholder="Village Name" readonly required>
+      <select id="category" required>
+        <option value="">Select Issue</option>
+        <option>Water Problem</option>
+        <option>Garbage Issue</option>
+        <option>Toilet Cleanliness</option>
+        <option>Mosquito / Pests</option>
+        <option>Public Health Concern</option>
+      </select>
+      <textarea id="description" rows="4" placeholder="Describe the issue..." required></textarea>
+      <input type="file" id="reportImage" accept="image/*">
+      <button type="submit">Submit Report</button>
+    </form>
+  </div>
+  <div id="userStatus" class="hidden">
+    <h3>Your Submitted Reports</h3>
+    <div id="statusList" class="scrollable"><p>No reports yet.</p></div>
+  </div>
+  <footer>© 2025 Village Health Connect</footer>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="container hidden" id="adminPage">
+  <div class="navbar">
+    <h2><i class="fa-solid fa-user-shield"></i> Admin Panel</h2>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- === Admin Stats Dashboard === -->
+  <div id="statsContainer" style="display:flex;justify-content:space-around;margin-bottom:15px;">
+    <div style="background:rgba(255,165,0,0.15);padding:10px 20px;border-radius:10px;text-align:center;border:1px solid rgba(255,165,0,0.3);">
+      <h3 style="color:#ff9f43;margin:5px 0;">Total</h3>
+      <p id="totalReports" style="font-size:18px;font-weight:bold;color:#fff;">0</p>
+    </div>
+    <div style="background:rgba(255,165,0,0.15);padding:10px 20px;border-radius:10px;text-align:center;border:1px solid rgba(255,165,0,0.3);">
+      <h3 style="color:#ff9f43;margin:5px 0;">Pending</h3>
+      <p id="pendingReports" style="font-size:18px;font-weight:bold;color:#ffd166;">0</p>
+    </div>
+    <div style="background:rgba(255,165,0,0.15);padding:10px 20px;border-radius:10px;text-align:center;border:1px solid rgba(255,165,0,0.3);">
+      <h3 style="color:#ff9f43;margin:5px 0;">Completed</h3>
+      <p id="completedReports" style="font-size:18px;font-weight:bold;color:#00ff9d;">0</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button id="adminViewBtn" class="active" onclick="showAdminTab('view')">View Reports</button>
+    <button onclick="showAdminTab('completed')">Completed</button>
+  </div>
+  <div style="margin-bottom:10px;">
+    <select id="filterCategory" onchange="filterReports()">
+      <option value="">Filter by Category</option>
+      <option>Water Problem</option>
+      <option>Garbage Issue</option>
+      <option>Toilet Cleanliness</option>
+      <option>Mosquito / Pests</option>
+      <option>Public Health Concern</option>
+    </select>
+  </div>
+  <div id="adminView" class="scrollable"></div>
+  <div id="adminCompleted" class="scrollable hidden"></div>
+  <footer>Monitoring Community Reports</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Lightbox Overlay -->
+<div class="lightbox-overlay" id="lightbox">
+  <img src="" alt="Report Image">
+</div>
+
+<script>
+// ===== Animated Background =====
+const canvas=document.getElementById('backgroundCanvas');
+const ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+let particles=[];
+for(let i=0;i<80;i++){
+  particles.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:Math.random()*3+1, dx:(Math.random()-0.5)*0.5, dy:(Math.random()-0.5)*0.5});
+}
+function animateParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let p of particles){
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,159,67,0.7)';
+    ctx.fill();
+    p.x+=p.dx; p.y+=p.dy;
+    if(p.x<0||p.x>canvas.width) p.dx*=-1;
+    if(p.y<0||p.y>canvas.height) p.dy*=-1;
+  }
+  for(let i=0;i<particles.length;i++){
+    for(let j=i+1;j<particles.length;j++){
+      let dx=particles[i].x-particles[j].x;
+      let dy=particles[i].y-particles[j].y;
+      let dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<100){ctx.beginPath();ctx.strokeStyle='rgba(255,159,67,'+(1-dist/100)*0.3+')';ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.stroke();}
+    }
+  }
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+window.addEventListener('resize',()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;});
+
+// ===== Health Tips =====
+const tips=["Always drink clean water to stay healthy.","Maintain hand hygiene before meals.","Ensure proper disposal of household waste.","Use mosquito nets to prevent diseases.","Keep surroundings clean and tidy.","Consume fresh fruits and vegetables daily."];
+function newTip(){document.getElementById("tipText").innerText=tips[Math.floor(Math.random()*tips.length)];}
+newTip();
+
+// ===== Toast =====
+const toast=document.getElementById("toast");
+function showToast(msg){toast.textContent=msg;toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),2500);}
+
+// ===== Show/Hide Password =====
+function togglePassword(id, icon){
+  const input=document.getElementById(id);
+  if(input.type==="password"){input.type="text"; icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash");}
+  else{input.type="password"; icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye");}
+}
+
+// ===== Show Register/Login Pages =====
+function showRegister(){document.getElementById("loginPage").classList.add("hidden"); document.getElementById("registerPage").classList.remove("hidden");}
+function showLogin(){document.getElementById("registerPage").classList.add("hidden"); document.getElementById("loginPage").classList.remove("hidden");}
+
+// ===== Registration =====
+function registerUser(){
+  const name=document.getElementById("regName").value.trim();
+  const village=document.getElementById("regVillage").value.trim();
+  const username=document.getElementById("regUsername").value.trim();
+  const password=document.getElementById("regPassword").value.trim();
+  const confirm=document.getElementById("regConfirmPassword").value.trim();
+  if(!name || !village || !username || !password){showToast("Fill all fields!"); return;}
+  if(password!==confirm){showToast("Passwords do not match!"); return;}
+  let users=JSON.parse(localStorage.getItem("users")||"[]");
+  if(users.find(u=>u.username===username)){showToast("Username exists!"); return;}
+  users.push({name,village,username,password});
+  localStorage.setItem("users",JSON.stringify(users));
+  showToast("Registration successful!");
+  showLogin();
+}
+
+// ===== Login =====
+function login(){
+  const u=document.getElementById("username").value.trim();
+  const p=document.getElementById("password").value.trim();
+  if(u==="admin"&&p==="123"){document.getElementById("loginPage").classList.add("hidden");document.getElementById("adminPage").classList.remove("hidden");showToast("Welcome, Admin!");loadAdminReports();return;}
+  let users=JSON.parse(localStorage.getItem("users")||"[]");
+  const user=users.find(us=>us.username===u && us.password===p);
+  if(user){document.getElementById("loginPage").classList.add("hidden");document.getElementById("userPage").classList.remove("hidden");showToast("Welcome, "+user.name+"!");document.getElementById("name").value=user.name;document.getElementById("village").value=user.village;loadUserStatus();}
+  else showToast("Invalid credentials!");
+}
+
+// ===== Logout =====
+function logout(){document.querySelectorAll(".container").forEach(c=>c.classList.add("hidden"));document.getElementById("loginPage").classList.remove("hidden");showToast("Logged out!");}
+
+// ===== User Tabs =====
+function showUserTab(tab){
+  ["home","report","status"].forEach(id=>document.getElementById("user"+id.charAt(0).toUpperCase()+id.slice(1)).classList.add("hidden"));
+  document.getElementById("user"+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.remove("hidden");
+  document.querySelectorAll("#userPage .tabs button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+  if(tab==="status") loadUserStatus();
+}
+
+// ===== Admin Tabs =====
+function showAdminTab(tab){
+  document.getElementById("adminView").classList.add("hidden");
+  document.getElementById("adminCompleted").classList.add("hidden");
+  document.getElementById("admin"+(tab.charAt(0).toUpperCase()+tab.slice(1))).classList.remove("hidden");
+  document.querySelectorAll("#adminPage .tabs button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+  if(tab==="view") loadAdminReports();
+}
+
+// ===== Report Form =====
+document.getElementById("reportForm").addEventListener("submit",function(e){
+  e.preventDefault();
+  const file=document.getElementById("reportImage").files[0];
+  let reader=new FileReader();
+  reader.onload=()=>{saveReport(reader.result);}
+  if(file) reader.readAsDataURL(file);
+  else saveReport("");
+});
+function saveReport(imgData){
+  let reports=JSON.parse(localStorage.getItem("reports")||"[]");
+  reports.push({
+    name:document.getElementById("name").value,
+    village:document.getElementById("village").value,
+    category:document.getElementById("category").value,
+    description:document.getElementById("description").value,
+    img:imgData,
+    date:new Date().toLocaleString(),
+    status:"Pending",
+    comment:""
+  });
+  localStorage.setItem("reports",JSON.stringify(reports));
+  document.getElementById("reportForm").reset();
+  showToast("Report submitted!");
+}
+
+// ===== Load User Status =====
+function loadUserStatus(){
+  let reports=JSON.parse(localStorage.getItem("reports")||"[]");
+  const userName=document.getElementById("name").value;
+  const list=document.getElementById("statusList");
+  list.innerHTML="";
+  reports=reports.filter(r=>r.name===userName);
+  if(reports.length===0){list.innerHTML="<p>No reports yet.</p>"; return;}
+  reports.slice().reverse().forEach(r=>{
+    const div=document.createElement("div");
+    div.style.background="rgba(255,255,255,0.05)";
+    div.style.borderLeft="4px solid #ff9f43";
+    div.style.padding="10px 14px";
+    div.style.borderRadius="10px";
+    div.style.margin="10px 0";
+    div.innerHTML=`<h4>${r.category}</h4>
+                   <p><b>Village:</b> ${r.village}</p>
+                   <p>${r.description}</p>
+                   ${r.img?`<img src="${r.img}" style="width:200px; height:auto; margin-top:10px; border-radius:8px; cursor:pointer;">`:""}
+                   <p><small>${r.date}</small></p>
+                   <p>Status: <b style="color:${r.status==='Completed'?'#00ff9d':'#ffd166'}">${r.status}</b></p>
+                   ${r.comment?`<p><b>Admin Comment:</b> ${r.comment}</p>`:""}`;
+    list.appendChild(div);
+  });
+}
+
+// ===== Load Admin Reports =====
+function loadAdminReports(){
+  let reports=JSON.parse(localStorage.getItem("reports")||"[]");
+  const viewDiv=document.getElementById("adminView");
+  const completedDiv=document.getElementById("adminCompleted");
+  viewDiv.innerHTML=""; completedDiv.innerHTML="";
+  if(reports.length===0){viewDiv.innerHTML="<p>No reports yet.</p>"; updateStats(); return;}
+  reports.forEach((r,index)=>{
+    const div=document.createElement("div");
+    div.style.background="rgba(255,255,255,0.05)";
+    div.style.borderLeft="4px solid #ff9f43";
+    div.style.padding="10px 14px";
+    div.style.borderRadius="10px";
+    div.style.margin="10px 0";
+    div.innerHTML=`<h4>${r.category}</h4>
+                   <p><b>Name:</b> ${r.name}</p>
+                   <p><b>Village:</b> ${r.village}</p>
+                   <p>${r.description}</p>
+                   ${r.img?`<img src="${r.img}" style="width:200px; height:auto; margin-top:10px; border-radius:8px; cursor:pointer;">`:""}
+                   <p><small>${r.date}</small></p>
+                   <p>Status: <b style="color:${r.status==='Completed'?'#00ff9d':'#ffd166'}">${r.status}</b></p>
+                   ${r.status==='Pending'?`<input type="text" id="comment${index}" placeholder="Add comment"><button onclick="markCompleted(${index})">Mark Completed</button>`:""}
+                   <button class="delete" onclick="deleteReport(${index})" style="margin-top:5px;">Delete</button>`;
+    if(r.status==="Completed") completedDiv.appendChild(div);
+    else viewDiv.appendChild(div);
+  });
+  updateStats();
+}
+
+// ===== Mark Completed =====
+function markCompleted(index){
+  let reports=JSON.parse(localStorage.getItem("reports")||"[]");
+  const comment=document.getElementById(`comment${index}`).value;
+  reports[index].status="Completed";
+  reports[index].comment=comment;
+  localStorage.setItem("reports",JSON.stringify(reports));
+  loadAdminReports();
+  showToast("Report marked as Completed!");
+  updateStats();
+}
+
+// ===== Delete Report =====
+function deleteReport(index){
+  let reports=JSON.parse(localStorage.getItem("reports")||"[]");
+  reports.splice(index,1);
+  localStorage.setItem("reports",JSON.stringify(reports));
+  loadAdminReports();
+  showToast("Report deleted!");
+  updateStats();
+}
+
+// ===== Filter Reports =====
+function filterReports(){
+  const cat=document.getElementById("filterCategory").value;
+  let reports=JSON.parse(localStorage.getItem("reports")||"[]");
+  if(cat) reports=reports.filter(r=>r.category===cat);
+  const viewDiv=document.getElementById("adminView");
+  viewDiv.innerHTML="";
+  if(reports.length===0){viewDiv.innerHTML="<p>No reports found.</p>"; return;}
+  reports.forEach((r,index)=>{
+    const div=document.createElement("div");
+    div.style.background="rgba(255,255,255,0.05)";
+    div.style.borderLeft="4px solid #ff9f43";
+    div.style.padding="10px 14px";
+    div.style.borderRadius="10px";
+    div.style.margin="10px 0";
+    div.innerHTML=`<h4>${r.category}</h4>
+                   <p><b>Name:</b> ${r.name}</p>
+                   <p><b>Village:</b> ${r.village}</p>
+                   <p>${r.description}</p>
+                   ${r.img?`<img src="${r.img}" style="width:200px; height:auto; margin-top:10px; border-radius:8px; cursor:pointer;">`:""}
+                   <p><small>${r.date}</small></p>
+                   <p>Status: <b style="color:${r.status==='Completed'?'#00ff9d':'#ffd166'}">${r.status}</b></p>`;
+    viewDiv.appendChild(div);
+  });
+}
+
+// ===== Update Admin Stats =====
+function updateStats() {
+  let reports = JSON.parse(localStorage.getItem("reports") || "[]");
+  document.getElementById("totalReports").innerText = reports.length;
+  document.getElementById("pendingReports").innerText = reports.filter(r => r.status === "Pending").length;
+  document.getElementById("completedReports").innerText = reports.filter(r => r.status === "Completed").length;
+}
+
+// ===== Lightbox Popup =====
+const lightbox=document.getElementById("lightbox");
+const lightboxImg=lightbox.querySelector("img");
+
+document.body.addEventListener("click", function(e){
+  if(e.target.tagName==="IMG" && e.target.closest("#statusList, #adminView, #adminCompleted")){
+    lightboxImg.src=e.target.src;
+    lightbox.classList.add("show");
+  }
+});
+
+lightbox.addEventListener("click", function(){
+  lightbox.classList.remove("show");
+});
+</script>
+</body>
+</html>
